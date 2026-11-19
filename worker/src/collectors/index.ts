@@ -46,7 +46,7 @@ export async function collectPosts(
       posts = await collectTelegram(env, identifier);
       break;
     case "instagram":
-      posts = await collectInstagram(env, identifier);
+      posts = await collectInstagram(env, identifier, range);
       break;
     case "youtube":
       posts = await collectYoutube(env, identifier);

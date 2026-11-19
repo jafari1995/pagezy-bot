@@ -1,39 +1,16 @@
 # ربات تحلیلگر Pagezy
 
-ربات تلگرام با **وب‌هوک** روی **Cloudflare Workers** (D1، KV، R2، Cron، Durable Object).
+## Zernio (زرینو = Zernio)
 
-## دیپلوی (Wrangler)
+- کلید: `ZERNIO_API_KEY` — `Authorization: Bearer` — پایه: `https://zernio.com/api/v1`
+- تحلیل پیج **خودتان** (متصل در Zernio): `ZERNIO_INSTAGRAM_ACCOUNT_ID` + `/v1/analytics`
+- **رقیب اینستاگرام:** Zernio پست‌های پیج رقبا را نمی‌دهد — فقط Apify/scraper اختیاری
+- تبلیغات Meta/Instagram رقیب: `GET /v1/ads/library?platform=meta&q=…`
 
-```bash
-cd worker && npm install
-npx wrangler d1 migrations apply pagezy-analyst --remote
-npm run deploy
-```
+## مدل‌های رایگان OpenRouter
 
-سکرت‌ها: `TELEGRAM_BOT_TOKEN`, `ALLOWED_USER_IDS`, `OPENROUTER_API_KEY`, `ZARINO_API_KEY`, `ZARINO_API_BASE_URL`, `YOUTUBE_API_KEY`, `TG_API_ID`, `TG_API_HASH`, `TG_SESSION_STRING`.
+زنجیره پیش‌فرض: gemma-4-31b → gemma-4-26b → nemotron-3-ultra → lightning → ernie-5.5 → ling-3.2؛ به‌روزرسانی دوره‌ای در KV.
 
-## تلگرام MTProto
+## دیپلوی
 
-**پیش‌فرض:** GramJS داخل Durable Object (`MtprotoCollector`).  
-Telethon فقط برای تست محلی پایتون.  
-Container در `services/mtproto-collector` فقط اگر GramJS روی اکانت شما bundle نشود.
-
-## اینستاگرام — Zarino
-
-کلید: `ZARINO_API_KEY` + `ZARINO_API_BASE_URL`  
-مسیر پیش‌فرض: `GET /v1/instagram/profile/posts?username=`
-
-اگر قرارداد API زرینو فرق دارد، فایل `worker/src/collectors/instagram/zarino.ts` را با مستندات تیم Pagezy هماهنگ کنید.
-
-## UX
-
-یک دکمه: **تحلیل رقبا** — بقیه مکالمه‌ای با LLM.
-
-## تست محلی
-
-```bash
-export MOCK_MODE=true
-pytest
-python scripts/run_mock_e2e.py
-cd worker && npm test
-```
+`cd worker && npm run deploy` — جزئیات در README.md

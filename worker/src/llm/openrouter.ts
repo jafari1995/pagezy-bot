@@ -1,54 +1,53 @@
-import { assertFreeModel, FREE_MODELS, PAGEZY_SYSTEM_PROMPT_FA, type Env, isMock } from "../env";
+import { assertFreeModel, PAGEZY_SYSTEM_PROMPT_FA, type Env, isMock } from "../env";
+import { getModelChain, shouldRotateModel } from "./models";
 
 export class OpenRouterClient {
   constructor(private env: Env) {}
-
-  private models(): string[] {
-    const list = [...FREE_MODELS];
-    if (this.env.OPENROUTER_MODEL) {
-      assertFreeModel(this.env.OPENROUTER_MODEL);
-      if (!list.includes(this.env.OPENROUTER_MODEL)) list.unshift(this.env.OPENROUTER_MODEL);
-    }
-    return list;
-  }
 
   async chat(userPrompt: string, maxTokens = 900): Promise<string> {
     if (isMock(this.env) || !this.env.OPENROUTER_API_KEY) {
       return mockResponse(userPrompt);
     }
+    const models = await getModelChain(this.env);
     let lastErr: unknown;
-    for (const model of this.models()) {
+    for (const model of models) {
+      assertFreeModel(model);
       try {
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.env.OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://pagezy.workers.dev",
-            "X-Title": "Pagezy Analyst",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: maxTokens,
-            messages: [
-              { role: "system", content: PAGEZY_SYSTEM_PROMPT_FA },
-              { role: "user", content: userPrompt },
-            ],
-          }),
-        });
-        if (res.status === 429) {
-          await sleep(2000);
-          continue;
-        }
-        if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as { choices: { message: { content: string } }[] };
-        return data.choices[0]?.message?.content?.trim() ?? "";
+        const { text, status } = await this.request(model, userPrompt, maxTokens);
+        if (text) return text;
+        if (shouldRotateModel(status)) continue;
       } catch (e) {
         lastErr = e;
-        await sleep(800);
+        await sleep(600);
       }
     }
-    throw new Error(`OpenRouter failed: ${lastErr}`);
+    throw new Error(`OpenRouter failed: ${lastErr ?? "no model"}`);
+  }
+
+  private async request(model: string, userPrompt: string, maxTokens: number): Promise<{ text: string; status: number }> {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pagezy.workers.dev",
+        "X-Title": "Pagezy Analyst",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages: [
+          { role: "system", content: PAGEZY_SYSTEM_PROMPT_FA },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      if (shouldRotateModel(res.status)) return { text: "", status: res.status };
+      throw new Error(await res.text());
+    }
+    const data = (await res.json()) as { choices: { message: { content: string } }[] };
+    return { text: data.choices[0]?.message?.content?.trim() ?? "", status: res.status };
   }
 
   async classifyBatch(captions: string[]): Promise<string[]> {
@@ -78,22 +77,22 @@ export class OpenRouterClient {
     const prompt = `تو orchestrator ربات تحلیل رقبای Pagezy هستی.
 از پیام کاربر و اسلات‌های فعلی، JSON معتبر برگردان (بدون markdown):
 {
-  "reply_fa": "پاسخ فارسی به کاربر",
-  "slots": { platform?, identifier?, timeRange?: {kind, start?, end?}, brandName?, brandKeywords?, exportFormat? },
-  "action": null | "run_report" | "export" | "register_brand" | "answer_question",
-  "question": "optional if answer_question"
+  "reply_fa": "پاسخ فارسی",
+  "slots": { platform?, identifier?, timeRange?: {kind, start?, end?}, brandName?, brandKeywords?, exportFormat?, zernioAccountId? },
+  "action": null | "run_report" | "export" | "register_brand" | "answer_question" | "scan_ad_library",
+  "question": "optional"
 }
-kind values: last_week, last_month, all, custom
-platform: telegram, instagram, youtube
+platform: telegram, instagram, youtube, zernio_connected
+برای اینستاگرام رقیب: اگر کلید scraper نیست صادقانه بگو فقط حساب‌های متصل Zernio یا scraper optional در دسترس است.
 
-اسلات فعلی: ${JSON.stringify(slots)}
-پیام کاربر: ${userText}`;
+اسلات: ${JSON.stringify(slots)}
+پیام: ${userText}`;
     const raw = await this.chat(prompt, 700);
     try {
       const m = raw.match(/\{[\s\S]*\}/);
       return JSON.parse(m?.[0] ?? "{}") as ConversationTurn;
     } catch {
-      return { reply_fa: "متوجه نشدم؛ لینک کانال یا پیج و بازه زمانی را بفرستید.", slots, action: null };
+      return { reply_fa: "لینک منبع و بازه را بفرستید.", slots, action: null };
     }
   }
 }
@@ -101,7 +100,7 @@ platform: telegram, instagram, youtube
 export interface ConversationTurn {
   reply_fa: string;
   slots: Record<string, unknown>;
-  action: null | "run_report" | "export" | "register_brand" | "answer_question";
+  action: null | "run_report" | "export" | "register_brand" | "answer_question" | "scan_ad_library";
   question?: string;
   exportFormat?: "xlsx" | "csv" | "pdf" | "txt";
 }
@@ -131,7 +130,7 @@ function mockConversationTurn(userText: string, slots: Record<string, unknown>):
     if (merged.platform && merged.identifier) action = "run_report";
     else {
       return {
-        reply_fa: "لینک یا @username منبع را بفرستید (مثلاً @channel یا لینک یوتیوب). بازه را هم بگویید: هفته گذشته، ماه گذشته، یا همه.",
+        reply_fa: "لینک یا @username منبع را بفرستید.",
         slots: merged,
         action: null,
       };
@@ -141,13 +140,12 @@ function mockConversationTurn(userText: string, slots: Record<string, unknown>):
     const fmt = /pdf/i.test(userText) ? "pdf" : /csv/i.test(userText) ? "csv" : /xlsx|excel|اکسل/i.test(userText) ? "xlsx" : "txt";
     return { reply_fa: "در حال آماده‌سازی فایل…", slots: merged, action: "export", exportFormat: fmt };
   }
-  if (/برند|رقیب|چراغ|مانیتور/i.test(userText)) {
+  if (/برند|رقیب|چراغ|تبلیغ.*اینستا|ad library/i.test(userText)) {
     merged.brandName = merged.brandName ?? userText.match(/برند\s+(\S+)/)?.[1] ?? "چراغ";
-    merged.brandKeywords = [String(merged.brandName), "تخفیف", "PAGEZY"];
-    return { reply_fa: `برند «${merged.brandName}» ثبت شد؛ اسکن دوره‌ای فعال است.`, slots: merged, action: "register_brand" };
+    return { reply_fa: `در حال جستجوی Ad Library برای «${merged.brandName}»…`, slots: merged, action: "scan_ad_library" };
   }
   return {
-    reply_fa: action === "run_report" ? "باشه، دارم داده‌ها را جمع می‌کنم…" : "سلام! لینک رقیب (تلگرام/اینستا/یوتیوب) و بازه زمانی را بفرستید.",
+    reply_fa: action === "run_report" ? "باشه، دارم داده‌ها را جمع می‌کنم…" : "سلام! لینک رقیب و بازه را بفرستید.",
     slots: merged,
     action,
   };

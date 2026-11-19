@@ -2,104 +2,64 @@
 
 [فارسی → README.fa.md](README.fa.md)
 
-Telegram **webhook** bot on **Cloudflare Workers** (D1, KV, R2, Cron, **Durable Objects**) for Persian competitor/content analysis. Owner: **Hamed Jafari**.
+Telegram **webhook** bot on **Cloudflare Workers** (D1, KV, R2, Cron, **GramJS Durable Object**). Owner: **Hamed Jafari**.
 
-## Architecture (Workers-first)
+## Stack
 
-| Piece | Where |
-|-------|--------|
-| Bot webhook + conversation LLM | Worker `worker/src` |
-| Persistence | D1 (`worker/migrations`) |
-| Report cache | KV / R2 exports |
-| Ad scan cron | Worker `scheduled` |
-| Telegram channels (MTProto) | **GramJS in `MtprotoCollector` Durable Object** |
-| Instagram | **Zarino API** (`ZARINO_API_KEY`, `ZARINO_API_BASE_URL`) |
-| YouTube | YouTube Data API v3 |
-| Local tests / mock | Python package `src/pagezy_bot` |
+| Piece | Technology |
+|-------|------------|
+| Bot | Worker webhook + conversational LLM |
+| MTProto | GramJS in `MtprotoCollector` DO (`nodejs_compat`) |
+| **Own social analytics** | **[Zernio](https://docs.zernio.com)** `GET /v1/analytics`, account insights |
+| **Competitor IG ads** | Zernio `GET /v1/ads/library?platform=meta` (Meta Ad Library) |
+| **Competitor IG posts** | Optional Apify / `INSTAGRAM_SCRAPER_BASE_URL` only — **not** Zernio |
+| Instagram (own) | Zernio + `ZERNIO_INSTAGRAM_ACCOUNT_ID` |
+| YouTube | YouTube Data API v3 (or Zernio analytics for connected YT account) |
+| LLM | OpenRouter **`:free` only** + KV-cached model list refreshed on cron |
 
-### MTProto: Worker vs Container
+### OpenRouter model chain (default order)
 
-- **Default:** GramJS inside a **Durable Object** (`worker/src/mtproto/MtprotoCollector.ts`) with `nodejs_compat`. DO stores FloodWait cooldown; each collect connects, reads public channel messages, disconnects.
-- **Why not Telethon?** Python does not run on Workers.
-- **Why not plain isolate?** Session/FloodWait state needs a single-writer; DO is the smallest Workers-native fit.
-- **Containers (`services/mtproto-collector/`):** **Fallback only** if GramJS fails to bundle or MTProto TCP is blocked in your account — set optional secret `MTPROTO_COLLECTOR_URL`. We avoid Containers unless you hit that wall.
+1. `google/gemma-4-31b-it:free`  
+2. `google/gemma-4-26b-a4b-it:free`  
+3. `nvidia/nemotron-3-ultra-550b-a55b:free`  
+4. `nvidia/nemotron-3.5-lightning:free`  
+5. `baidu/ernie-5.5-flash-preview:free`  
+6. `inclusionai/ling-3.2-flash:free`  
+7. Other live `:free` ids from `GET https://openrouter.ai/api/v1/models` (cached in KV)
 
-### Zarino Instagram
+Cron also refreshes this list. Retries rotate models on 404 / 429 / 5xx.
 
-No public Zarino scrape API docs were found (distinct from zernio.com / zarrino.io corporate site). The adapter calls:
+### What Zernio can and cannot do
 
-`GET {ZARINO_API_BASE_URL}/v1/instagram/profile/posts?username=…`  
-`Authorization: Bearer {ZARINO_API_KEY}`
+| Capability | Zernio | Notes |
+|------------|--------|--------|
+| Analytics for **your connected** Instagram/YouTube/etc. | Yes | `GET /v1/analytics?accountId=…` |
+| Account-level IG insights | Yes | `GET /v1/analytics/instagram/account-insights` |
+| **Arbitrary competitor** Instagram post history | **No** | API only covers connected accounts |
+| Competitor **Meta/IG ads** in EU/UK archive | Yes | `GET /v1/ads/library` (40 Meta searches/hour/team) |
+| US-only commercial ads | Often **missing** | Meta archive limitation (docs) |
+| Telegram channel posts | **No** | Use GramJS DO |
 
-**Owner action:** confirm base URL + response JSON with Zarino team; adjust `worker/src/collectors/instagram/zarino.ts` mapping if fields differ.
+Competitor IG posts: set `APIFY_API_TOKEN` or `INSTAGRAM_SCRAPER_BASE_URL`, else the bot explains in Persian.
 
-## UX
+## Wrangler secrets
 
-Minimal menu: one button **«تحلیل رقبا»**, then the agent asks conversationally for sources, time range, brand keywords, exports (LLM slot-filling). No multi-step inline wizards.
-
-## Deploy (Wrangler)
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `ALLOWED_USER_IDS`, `OPENROUTER_API_KEY`, `ZERNIO_API_KEY`, `ZERNIO_INSTAGRAM_ACCOUNT_ID`, `YOUTUBE_API_KEY`, `TG_API_ID`, `TG_API_HASH`, `TG_SESSION_STRING`, optional `APIFY_API_TOKEN`, `INSTAGRAM_SCRAPER_BASE_URL`, `MOCK_MODE`.
 
 ```bash
-cd worker
-npm install
-npx wrangler d1 create pagezy-analyst   # set database_id in wrangler.toml
-npx wrangler kv namespace create pagezy-cache
-npx wrangler r2 bucket create pagezy-exports
+cd worker && npm install
 npx wrangler d1 migrations apply pagezy-analyst --remote
-
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put ALLOWED_USER_IDS
-npx wrangler secret put OPENROUTER_API_KEY
-npx wrangler secret put ZARINO_API_KEY
-npx wrangler secret put ZARINO_API_BASE_URL
-npx wrangler secret put YOUTUBE_API_KEY
-npx wrangler secret put TG_API_ID
-npx wrangler secret put TG_API_HASH
-npx wrangler secret put TG_SESSION_STRING
-npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
-
 npm run deploy
 ```
 
-Webhook:
+## Tests
 
 ```bash
-curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=https://<your-worker>.workers.dev/telegram/webhook" \
-  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+python3 -m pytest
+MOCK_MODE=true python3 scripts/run_mock_e2e.py
+cd worker && npm test
 ```
 
-Mock E2E (no Telegram):
+## UX
 
-```bash
-npx wrangler dev
-curl http://localhost:8787/mock/e2e   # MOCK_MODE=true
-```
-
-## Local Python (tests only)
-
-```bash
-pip install -e ".[dev]"
-export MOCK_MODE=true
-pytest
-python scripts/run_mock_e2e.py
-```
-
-## LLM
-
-OpenRouter **only** models ending in `:free` (enforced in Worker + Python).
-
-## Known limits
-
-| Source | Notes |
-|--------|--------|
-| Instagram | Zarino contract must match; else partial errors in Persian |
-| Telegram Ads | Not enumerable via API — keyword/heuristic monitoring |
-| PDF RTL | Worker PDF is basic; full Vazirmatn RTL in Python exports under `fonts/` |
-
-## Repository layout
-
-- `worker/` — production Workers app  
-- `src/pagezy_bot/` — shared analysis + local mock  
-- `services/mtproto-collector/` — optional Container fallback  
-- `fonts/Vazirmatn-Regular.ttf` — RTL PDF (Python export path)
+One button **تحلیل رقبا** → conversational flow for sources, ranges, exports, Ad Library brand search.

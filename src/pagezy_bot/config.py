@@ -15,10 +15,12 @@ PAGEZY_SYSTEM_PROMPT_FA = """تو دستیار تحلیل محتوای برند 
 وقتی داده ناقص است، صریح بگو چه چیزی در دسترس نبود."""
 
 DEFAULT_FREE_MODELS = [
-    "google/gemma-2-9b-it:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "qwen/qwen-2-7b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "baidu/ernie-5.5-flash-preview:free",
+    "inclusionai/ling-3.2-flash:free",
 ]
 
 
@@ -41,8 +43,8 @@ class Settings(BaseSettings):
 
     youtube_api_key: str = ""
 
-    zarino_api_key: str = ""
-    zarino_api_base_url: str = ""
+    zernio_api_key: str = ""
+    zernio_instagram_account_id: str = ""
     instagram_session_path: str = ""
     apify_api_token: str = ""
 

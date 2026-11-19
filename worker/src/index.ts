@@ -34,11 +34,13 @@ export default {
   },
 
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runAdScan(env));
+    ctx.waitUntil(runScheduledJobs(env));
   },
 };
 
-async function runAdScan(env: Env): Promise<void> {
+async function runScheduledJobs(env: Env): Promise<void> {
+  const { refreshFreeModels } = await import("./llm/models");
+  await refreshFreeModels(env);
   if (!env.TELEGRAM_BOT_TOKEN) return;
   const { scanBrandsCron } = await import("./adScan");
   await scanBrandsCron(env);

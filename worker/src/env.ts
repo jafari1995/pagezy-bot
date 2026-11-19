@@ -9,8 +9,15 @@ export interface Env {
   OPENROUTER_API_KEY: string;
   OPENROUTER_MODEL?: string;
   YOUTUBE_API_KEY?: string;
-  ZARINO_API_KEY?: string;
-  ZARINO_API_BASE_URL?: string;
+  ZERNIO_API_KEY?: string;
+  /** Zernio SocialAccount id for your connected Instagram (analytics) */
+  ZERNIO_INSTAGRAM_ACCOUNT_ID?: string;
+  /** Optional Zernio account for YouTube analytics */
+  ZERNIO_YOUTUBE_ACCOUNT_ID?: string;
+  /** Optional third-party competitor IG scraper (Apify sync) */
+  APIFY_API_TOKEN?: string;
+  /** Optional generic HTTP scraper base URL for competitor IG */
+  INSTAGRAM_SCRAPER_BASE_URL?: string;
   TG_API_ID?: string;
   TG_API_HASH?: string;
   TG_SESSION_STRING?: string;
@@ -23,11 +30,7 @@ export const PAGEZY_SYSTEM_PROMPT_FA = `تو دستیار تحلیل محتوا�
 مالک: حامد جعفری. لحن: صمیمی، روشن، مدرن و حرفه‌ای — فارسی روان.
 گزارش‌ها خلاصه و دقیق باشند. اگر داده ناقص است صریح بگو.`;
 
-export const FREE_MODELS = [
-  "google/gemma-2-9b-it:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "qwen/qwen-2-7b-instruct:free",
-];
+export { PREFERRED_FREE_ORDER as FREE_MODELS } from "./llm/models";
 
 export function assertFreeModel(model: string): void {
   if (!model.endsWith(":free")) {

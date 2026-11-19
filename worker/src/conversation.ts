@@ -90,6 +90,14 @@ export async function handleTelegramUpdate(env: Env, update: Record<string, unkn
     return;
   }
 
+  if (turn.action === "scan_ad_library") {
+    const brand = String(session.slots.brandName ?? text.replace(/.*برند\s*/i, "").trim() || "چراغ");
+    const { scanAdLibraryForBrand } = await import("./adScan");
+    await scanAdLibraryForBrand(env, brand, msg.chat.id);
+    await saveSession(env, userId, session);
+    return;
+  }
+
   if (turn.action === "register_brand" && session.slots.brandName) {
     const kws = session.slots.brandKeywords ?? [session.slots.brandName];
     await env.DB.prepare(
