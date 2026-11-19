@@ -47,7 +47,7 @@ function exportTxt(report: ReportPayload) {
 async function exportPdf(report: ReportPayload) {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595, 842]);
-  // Note: full Persian RTL needs embedded Vazirmatn via font bytes in R2; MVP uses UTF-8 lines (limited shaping)
+  // Note: full Persian RTL needs embedded Vazirmatn font bytes; MVP uses UTF-8 lines (limited shaping)
   const lines = report.summaryText.split("\n").slice(0, 40);
   let y = 800;
   for (const line of lines) {
