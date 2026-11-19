@@ -39,6 +39,8 @@ export default {
 };
 
 async function runScheduledJobs(env: Env): Promise<void> {
+  const { probeZernioBusinessDiscovery } = await import("./collectors/zernio/businessDiscovery");
+  await probeZernioBusinessDiscovery(env);
   const { refreshFreeModels } = await import("./llm/models");
   await refreshFreeModels(env);
   if (!env.TELEGRAM_BOT_TOKEN) return;

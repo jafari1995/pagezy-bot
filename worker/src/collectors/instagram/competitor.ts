@@ -5,8 +5,10 @@ import type { Env } from "../../env";
 import type { CollectedPost } from "../../types";
 
 const COMPETITOR_IG_MESSAGE_FA =
-  "پست‌های اینستاگرامِ رقبا با Zernio در دسترس نیست (فقط حساب‌های متصل به تیم شما). " +
-  "برای رقیب، APIFY_API_TOKEN یا INSTAGRAM_SCRAPER_BASE_URL را تنظیم کنید؛ وگرنه فقط Ad Library یا تلگرام/یوتیوب.";
+  "پست‌های اینستاگرام رقبا نیاز به Meta Business Discovery دارد: META_IG_USER_ID + META_ACCESS_TOKEN " +
+  "(یا مسیر Zernio business-discovery با ZERNIO_INSTAGRAM_ACCOUNT_ID). " +
+  "برای رقیب بازدید (views) معمولاً در دسترس نیست — لایک/کامنت گزارش می‌شود. " +
+  "جایگزین: APIFY_API_TOKEN یا INSTAGRAM_SCRAPER_BASE_URL.";
 
 export async function fetchCompetitorInstagram(
   env: Env,

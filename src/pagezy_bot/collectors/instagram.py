@@ -22,14 +22,26 @@ class InstagramCollector:
         username = _extract_username(link_or_username)
 
         if settings.zernio_api_key and settings.zernio_instagram_account_id:
-            if link_or_username in (settings.zernio_instagram_account_id, "connected", "pagezy"):
+            if link_or_username in (
+                settings.zernio_instagram_account_id,
+                "connected",
+                "pagezy",
+                "alsafaridev7",
+                "@alsafaridev7",
+            ):
                 from pagezy_bot.collectors.zernio_instagram import fetch_connected_instagram
 
                 return fetch_connected_instagram(settings.zernio_instagram_account_id, limit)
-            raise RuntimeError(
-                "پست‌های اینستاگرام رقبا با Zernio ممکن نیست — فقط حساب متصل. "
-                "برای رقیب Apify یا Instaloader را فعال کنید."
-            )
+
+        if settings.meta_ig_user_id and settings.meta_access_token:
+            from pagezy_bot.collectors.meta_business_discovery import fetch_via_meta_business_discovery
+
+            return fetch_via_meta_business_discovery(link_or_username, limit)
+
+        if settings.zernio_api_key and settings.zernio_instagram_account_id:
+            from pagezy_bot.collectors.zernio_business_discovery import fetch_via_zernio_business_discovery
+
+            return fetch_via_zernio_business_discovery(link_or_username, limit)
 
         if settings.apify_api_token:
             posts = await self._fetch_via_apify(username, limit)

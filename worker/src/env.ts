@@ -14,6 +14,10 @@ export interface Env {
   ZERNIO_INSTAGRAM_ACCOUNT_ID?: string;
   /** Optional Zernio account for YouTube analytics */
   ZERNIO_YOUTUBE_ACCOUNT_ID?: string;
+  /** Your connected IG user id for Meta Business Discovery (e.g. alsafaridev7) */
+  META_IG_USER_ID?: string;
+  META_ACCESS_TOKEN?: string;
+  META_GRAPH_VERSION?: string;
   /** Optional third-party competitor IG scraper (Apify sync) */
   APIFY_API_TOKEN?: string;
   /** Optional generic HTTP scraper base URL for competitor IG */

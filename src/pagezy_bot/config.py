@@ -45,6 +45,9 @@ class Settings(BaseSettings):
 
     zernio_api_key: str = ""
     zernio_instagram_account_id: str = ""
+    meta_ig_user_id: str = ""
+    meta_access_token: str = ""
+    meta_graph_version: str = "v22.0"
     instagram_session_path: str = ""
     apify_api_token: str = ""
 
