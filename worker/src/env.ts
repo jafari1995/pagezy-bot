@@ -1,8 +1,7 @@
 export interface Env {
-  DB: D1Database;
   CACHE: KVNamespace;
-  EXPORTS: R2Bucket;
   MTPROTO: DurableObjectNamespace;
+  PAGEZY_STORE?: DurableObjectNamespace;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   ALLOWED_USER_IDS: string;

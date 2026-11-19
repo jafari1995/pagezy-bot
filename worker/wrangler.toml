@@ -5,12 +5,14 @@ compatibility_flags = ["nodejs_compat"]
 
 [durable_objects]
 bindings = [
-  { name = "MTPROTO", class_name = "MtprotoCollector" }
+  { name = "MTPROTO", class_name = "MtprotoCollector" },
+  { name = "PAGEZY_STORE", class_name = "PagezyStore" },
 ]
 
 [[migrations]]
 tag = "v1"
 new_classes = ["MtprotoCollector"]
+new_sqlite_classes = ["PagezyStore"]
 
 [observability]
 enabled = true
@@ -18,19 +20,9 @@ enabled = true
 [observability.traces]
 enabled = true
 
-[[d1_databases]]
-binding = "DB"
-database_name = "pagezy-analyst"
-database_id = "00000000-0000-0000-0000-000000000001"
-migrations_dir = "migrations"
-
 [[kv_namespaces]]
 binding = "CACHE"
 id = "00000000-0000-0000-0000-000000000002"
-
-[[r2_buckets]]
-binding = "EXPORTS"
-bucket_name = "pagezy-exports"
 
 [triggers]
 crons = ["0 */2 * * *"]
@@ -39,5 +31,5 @@ crons = ["0 */2 * * *"]
 MOCK_MODE = "false"
 ZERNIO_INSTAGRAM_ACCOUNT_ID = "6af6e7b664a67632e57fced8"
 
-# MTProto: GramJS in Durable Object (secrets TG_API_ID, TG_API_HASH, TG_SESSION_STRING)
-# Optional MTPROTO_COLLECTOR_URL only if GramJS cannot bundle in your account
+# Secrets: TELEGRAM_BOT_TOKEN, ALLOWED_USER_IDS, OPENROUTER_API_KEY, ZERNIO_API_KEY,
+# YOUTUBE_API_KEY, TG_API_ID, TG_API_HASH, TG_SESSION_STRING, optional META_*

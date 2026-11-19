@@ -3,6 +3,7 @@ import type { Env } from "./env";
 import { isMock } from "./env";
 
 export { MtprotoCollector } from "./mtproto/MtprotoCollector";
+export { PagezyStore } from "./storage/PagezyStore";
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

@@ -2,14 +2,16 @@
 
 [فارسی → README.fa.md](README.fa.md)
 
-Telegram **webhook** bot on **Cloudflare Workers** (D1, KV, R2, Cron, **GramJS Durable Object**). Owner: **Hamed Jafari**.
+Telegram **webhook** bot on **Cloudflare Workers** (KV, Durable Objects + DO SQLite, Cron). No D1/R2 required. Owner: **Hamed Jafari**.
 
 ## Stack
 
 | Piece | Technology |
 |-------|------------|
 | Bot | Worker webhook + conversational LLM |
+| Persistence | **KV** (`CACHE`) — OpenRouter model list, probes; **PagezyStore DO SQLite** — sessions, brands, posts cache |
 | MTProto | GramJS in `MtprotoCollector` DO (`nodejs_compat`) |
+| Exports | In-memory → Telegram `sendDocument` (no R2) |
 | **Own social analytics** | **[Zernio](https://docs.zernio.com)** `GET /v1/analytics`, account insights |
 | **Competitor IG ads** | Zernio `GET /v1/ads/library?platform=meta` (Meta Ad Library) |
 | **Competitor IG posts** | **Primary:** Zernio `GET /v1/accounts/{accountId}/instagram/business-discovery` (`ZERNIO_API_KEY`; default account `6af6e7b664a67632e57fced8`). **Optional:** Meta Graph if `META_*` set. |
@@ -48,9 +50,17 @@ Competitor IG: only `ZERNIO_API_KEY` required (account defaults to `6af6e7b664a6
 
 ```bash
 cd worker && npm install
-npx wrangler d1 migrations apply pagezy-analyst --remote
+# Create KV: wrangler kv namespace create CACHE
 npm run deploy
 ```
+
+### `wrangler.toml` bindings (token-compatible)
+
+- **KV** `CACHE` — LLM model cache, Zernio probe flags  
+- **Durable Object** `MTPROTO` → `MtprotoCollector` (Telegram MTProto)  
+- **Durable Object** `PAGEZY_STORE` → `PagezyStore` (SQLite: brands, sessions, optional post cache)  
+- **Cron** `0 */2 * * *` — model refresh + ad scan  
+- No `d1_databases`, no `r2_buckets`
 
 ## Tests
 

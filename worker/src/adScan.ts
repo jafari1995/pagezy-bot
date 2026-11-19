@@ -2,18 +2,14 @@ import { collectPosts } from "./collectors";
 import type { Env } from "./env";
 import { isMock } from "./env";
 import { formatAdLibraryAlertFa, searchMetaAdLibrary } from "./collectors/zernio/adLibrary";
+import { createBrand, listBrandChannels, listBrands } from "./storage/storeClient";
 import { tgSendMessage } from "./telegram";
 import type { Platform } from "./types";
 
 export async function scanBrandsCron(env: Env): Promise<void> {
-  const brands = await env.DB.prepare("SELECT id, owner_user_id, name, keywords_json FROM monitored_brands").all<{
-    id: number;
-    owner_user_id: string;
-    name: string;
-    keywords_json: string;
-  }>();
+  const brands = await listBrands(env);
 
-  for (const brand of brands.results ?? []) {
+  for (const brand of brands) {
     const keywords: string[] = JSON.parse(brand.keywords_json || "[]");
     const query = [brand.name, ...keywords].filter(Boolean).join(" ");
 
@@ -33,13 +29,7 @@ export async function scanBrandsCron(env: Env): Promise<void> {
       }
     }
 
-    const channels = await env.DB.prepare(
-      "SELECT platform, identifier FROM brand_scan_channels WHERE brand_id = ?",
-    )
-      .bind(brand.id)
-      .all<{ platform: string; identifier: string }>();
-
-    const chans = channels.results ?? [];
+    const chans = await listBrandChannels(env, brand.id);
     if (!chans.length && isMock(env)) {
       await tgSendMessage(
         env.TELEGRAM_BOT_TOKEN,
@@ -59,7 +49,7 @@ export async function scanBrandsCron(env: Env): Promise<void> {
           await tgSendMessage(env.TELEGRAM_BOT_TOKEN, brand.owner_user_id, text);
         }
       } catch {
-        /* instagram competitor may be unavailable — telegram scan continues */
+        /* skip unavailable platform */
       }
     }
   }
@@ -81,6 +71,8 @@ export async function scanAdLibraryForBrand(env: Env, brandName: string, chatId:
   const hits = await searchMetaAdLibrary(env, brandName);
   await tgSendMessage(env.TELEGRAM_BOT_TOKEN, chatId, formatAdLibraryAlertFa(brandName, hits));
 }
+
+export { createBrand };
 
 function matchesBrand(text: string, name: string, keywords: string[]): boolean {
   const t = text.toLowerCase();

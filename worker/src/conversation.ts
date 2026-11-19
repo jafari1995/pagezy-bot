@@ -100,11 +100,8 @@ export async function handleTelegramUpdate(env: Env, update: Record<string, unkn
 
   if (turn.action === "register_brand" && session.slots.brandName) {
     const kws = session.slots.brandKeywords ?? [session.slots.brandName];
-    await env.DB.prepare(
-      "INSERT INTO monitored_brands (owner_user_id, name, keywords_json, created_at) VALUES (?, ?, ?, ?)",
-    )
-      .bind(userId, session.slots.brandName, JSON.stringify(kws), new Date().toISOString())
-      .run();
+    const { createBrand } = await import("./adScan");
+    await createBrand(env, userId, String(session.slots.brandName), kws.map(String));
     reply = `برند «${session.slots.brandName}» ذخیره شد. برای تنظیم کانال‌های اسکن در پیام بعدی @channel بدهید.`;
   }
 
