@@ -12,7 +12,7 @@ Telegram **webhook** bot on **Cloudflare Workers** (D1, KV, R2, Cron, **GramJS D
 | MTProto | GramJS in `MtprotoCollector` DO (`nodejs_compat`) |
 | **Own social analytics** | **[Zernio](https://docs.zernio.com)** `GET /v1/analytics`, account insights |
 | **Competitor IG ads** | Zernio `GET /v1/ads/library?platform=meta` (Meta Ad Library) |
-| **Competitor IG posts** | **Meta Graph Business Discovery** (`META_IG_USER_ID` + `META_ACCESS_TOKEN`); fallback `GET /v1/accounts/{id}/instagram/business-discovery` (Zernio); optional Apify/scraper |
+| **Competitor IG posts** | **Primary:** Zernio `GET /v1/accounts/{accountId}/instagram/business-discovery` (`ZERNIO_API_KEY`; default account `6af6e7b664a67632e57fced8`). **Optional:** Meta Graph if `META_*` set. |
 | Instagram (own) | Zernio + `ZERNIO_INSTAGRAM_ACCOUNT_ID` |
 | YouTube | YouTube Data API v3 (or Zernio analytics for connected YT account) |
 | LLM | OpenRouter **`:free` only** + KV-cached model list refreshed on cron |
@@ -35,12 +35,12 @@ Cron also refreshes this list. Retries rotate models on 404 / 429 / 5xx.
 |------------|--------|--------|
 | Analytics for **your connected** Instagram/YouTube/etc. | Yes | `GET /v1/analytics?accountId=…` |
 | Account-level IG insights | Yes | `GET /v1/analytics/instagram/account-insights` |
-| **Arbitrary competitor** Instagram post history | Via **Business Discovery** only | Meta Graph or Zernio `.../instagram/business-discovery`; **views usually null** on competitor posts (likes/comments OK; Reels may have viewCount via Zernio path) |
+| **Arbitrary competitor** Instagram post history | Zernio BD (then optional Meta) | Response `{ profile, media[] }` camelCase; `limit` query only (no cursor); **viewCount** on Reels only |
 | Competitor **Meta/IG ads** in EU/UK archive | Yes | `GET /v1/ads/library` (40 Meta searches/hour/team) |
 | US-only commercial ads | Often **missing** | Meta archive limitation (docs) |
 | Telegram channel posts | **No** | Use GramJS DO |
 
-Competitor IG: set `META_IG_USER_ID` + `META_ACCESS_TOKEN` (token from the connected Page/IG app). Zernio account `6af6e7b664a67632e57fced8` for fallback/probe. Startup cron probes Zernio BD once (KV).
+Competitor IG: only `ZERNIO_API_KEY` required (account defaults to `6af6e7b664a67632e57fced8`). Optional `META_IG_USER_ID` + `META_ACCESS_TOKEN` as fallback. Cron probes Zernio BD once (KV).
 
 ## Wrangler secrets
 

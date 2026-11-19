@@ -3,6 +3,7 @@ import { isMock as mockFlag } from "../../env";
 import type { CollectedPost, TimeRange } from "../../types";
 import { fetchConnectedInstagramPosts } from "../zernio/analytics";
 import { fetchViaZernioBusinessDiscovery } from "../zernio/businessDiscovery";
+import { resolvedZernioInstagramAccountId } from "../zernio/defaults";
 import { mockInstagram } from "../mock";
 import { competitorInstagramUnavailableMessage, fetchCompetitorInstagram } from "./competitor";
 import { fetchViaMetaBusinessDiscovery } from "./metaBusinessDiscovery";
@@ -10,8 +11,8 @@ import { fetchViaMetaBusinessDiscovery } from "./metaBusinessDiscovery";
 /**
  * Instagram collection:
  * 1. Own account — Zernio GET /v1/analytics (connected accountId)
- * 2. Competitor — Meta Graph Business Discovery (primary)
- * 3. Competitor fallback — Zernio GET .../instagram/business-discovery (documented)
+ * 2. Competitor — Zernio GET .../instagram/business-discovery (primary)
+ * 3. Optional Meta Graph Business Discovery if META_* set
  * 4. Optional Apify / scraper
  */
 export async function collectInstagram(
@@ -23,39 +24,37 @@ export async function collectInstagram(
     return mockInstagram(identifier.replace(/^@/, "").split("/").pop() ?? "demo");
   }
 
-  const accountId = env.ZERNIO_INSTAGRAM_ACCOUNT_ID;
-  const idNorm = identifier.trim();
+  const accountId = resolvedZernioInstagramAccountId(env);
+  const idNorm = identifier.trim().toLowerCase();
   const isConnectedRequest =
-    accountId &&
-    (idNorm === accountId ||
-      idNorm.toLowerCase().includes("alsafari") ||
-      idNorm === "@alsafaridev7" ||
-      idNorm.toLowerCase().includes("pagezy") ||
-      idNorm === "connected");
+    idNorm === accountId.toLowerCase() ||
+    idNorm.includes("alsafari") ||
+    idNorm === "@alsafaridev7" ||
+    idNorm === "alsafaridev7" ||
+    idNorm.includes("pagezy") ||
+    idNorm === "connected";
 
-  if (isConnectedRequest && accountId) {
+  if (isConnectedRequest && env.ZERNIO_API_KEY) {
     return fetchConnectedInstagramPosts(env, accountId, range);
   }
 
-  const target = identifier;
-
-  if (env.META_IG_USER_ID && env.META_ACCESS_TOKEN) {
+  if (env.ZERNIO_API_KEY) {
     try {
-      return await fetchViaMetaBusinessDiscovery(env, target, 50);
-    } catch (metaErr) {
-      if (env.ZERNIO_API_KEY && env.ZERNIO_INSTAGRAM_ACCOUNT_ID) {
+      return await fetchViaZernioBusinessDiscovery(env, identifier, 50);
+    } catch (zernioErr) {
+      if (env.META_IG_USER_ID && env.META_ACCESS_TOKEN) {
         try {
-          return await fetchViaZernioBusinessDiscovery(env, target, 50);
+          return await fetchViaMetaBusinessDiscovery(env, identifier, 50);
         } catch {
-          throw metaErr;
+          throw zernioErr;
         }
       }
-      throw metaErr;
+      throw zernioErr;
     }
   }
 
-  if (env.ZERNIO_API_KEY && env.ZERNIO_INSTAGRAM_ACCOUNT_ID) {
-    return fetchViaZernioBusinessDiscovery(env, target, 50);
+  if (env.META_IG_USER_ID && env.META_ACCESS_TOKEN) {
+    return fetchViaMetaBusinessDiscovery(env, identifier, 50);
   }
 
   if (env.APIFY_API_TOKEN || env.INSTAGRAM_SCRAPER_BASE_URL) {

@@ -16,15 +16,16 @@ ZERNIO_BASE = "https://zernio.com/api/v1"
 
 def fetch_via_zernio_business_discovery(link_or_username: str, limit: int = 50) -> list[CollectedPost]:
     settings = get_settings()
-    if not settings.zernio_api_key or not settings.zernio_instagram_account_id:
-        raise RuntimeError("ZERNIO_API_KEY و ZERNIO_INSTAGRAM_ACCOUNT_ID لازم است.")
+    if not settings.zernio_api_key:
+        raise RuntimeError("ZERNIO_API_KEY لازم است.")
+    account_id = settings.zernio_instagram_account_id or "6af6e7b664a67632e57fced8"
     username = link_or_username.strip().rstrip("/")
     m = re.search(r"instagram\.com/([^/?]+)", username, re.I)
     if m:
         username = m.group(1)
     username = username.lstrip("@")
 
-    url = f"{ZERNIO_BASE}/accounts/{settings.zernio_instagram_account_id}/instagram/business-discovery"
+    url = f"{ZERNIO_BASE}/accounts/{account_id}/instagram/business-discovery"
     with httpx.Client(timeout=60.0) as client:
         resp = client.get(
             url,

@@ -33,15 +33,22 @@ class InstagramCollector:
 
                 return fetch_connected_instagram(settings.zernio_instagram_account_id, limit)
 
+        if settings.zernio_api_key:
+            from pagezy_bot.collectors.zernio_business_discovery import fetch_via_zernio_business_discovery
+
+            try:
+                return fetch_via_zernio_business_discovery(link_or_username, limit)
+            except Exception as zerr:
+                if settings.meta_ig_user_id and settings.meta_access_token:
+                    from pagezy_bot.collectors.meta_business_discovery import fetch_via_meta_business_discovery
+
+                    return fetch_via_meta_business_discovery(link_or_username, limit)
+                raise zerr
+
         if settings.meta_ig_user_id and settings.meta_access_token:
             from pagezy_bot.collectors.meta_business_discovery import fetch_via_meta_business_discovery
 
             return fetch_via_meta_business_discovery(link_or_username, limit)
-
-        if settings.zernio_api_key and settings.zernio_instagram_account_id:
-            from pagezy_bot.collectors.zernio_business_discovery import fetch_via_zernio_business_discovery
-
-            return fetch_via_zernio_business_discovery(link_or_username, limit)
 
         if settings.apify_api_token:
             posts = await self._fetch_via_apify(username, limit)

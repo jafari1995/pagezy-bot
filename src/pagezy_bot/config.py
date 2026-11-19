@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     youtube_api_key: str = ""
 
     zernio_api_key: str = ""
-    zernio_instagram_account_id: str = ""
+    zernio_instagram_account_id: str = "6af6e7b664a67632e57fced8"
     meta_ig_user_id: str = ""
     meta_access_token: str = ""
     meta_graph_version: str = "v22.0"

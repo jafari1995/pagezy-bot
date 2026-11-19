@@ -37,6 +37,7 @@ crons = ["0 */2 * * *"]
 
 [vars]
 MOCK_MODE = "false"
+ZERNIO_INSTAGRAM_ACCOUNT_ID = "6af6e7b664a67632e57fced8"
 
 # MTProto: GramJS in Durable Object (secrets TG_API_ID, TG_API_HASH, TG_SESSION_STRING)
 # Optional MTPROTO_COLLECTOR_URL only if GramJS cannot bundle in your account
