@@ -115,7 +115,8 @@ export async function handleTelegramUpdate(env: Env, update: Record<string, unkn
 
 function isAllowed(env: Env, userId: string): boolean {
   const ids = allowedUsers(env);
-  if (isMock(env) && ids.size === 0) return true;
+  // Empty list or "*" = public bot (open to everyone).
+  if (ids.size === 0 || ids.has("*")) return true;
   return ids.has(userId);
 }
 
