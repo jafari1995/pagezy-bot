@@ -11,8 +11,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["MtprotoCollector"]
-new_sqlite_classes = ["PagezyStore"]
+new_sqlite_classes = ["MtprotoCollector", "PagezyStore"]
 
 [observability]
 enabled = true
@@ -22,7 +21,7 @@ enabled = true
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "00000000-0000-0000-0000-000000000002"
+id = "0b0f298df8ea4cefa5248cc5e2c24da7"
 
 [triggers]
 crons = ["0 */2 * * *"]

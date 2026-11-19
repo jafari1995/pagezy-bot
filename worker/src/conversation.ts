@@ -91,7 +91,7 @@ export async function handleTelegramUpdate(env: Env, update: Record<string, unkn
   }
 
   if (turn.action === "scan_ad_library") {
-    const brand = String(session.slots.brandName ?? text.replace(/.*برند\s*/i, "").trim() || "چراغ");
+    const brand = String((session.slots.brandName ?? text.replace(/.*برند\s*/i, "").trim()) || "چراغ");
     const { scanAdLibraryForBrand } = await import("./adScan");
     await scanAdLibraryForBrand(env, brand, msg.chat.id);
     await saveSession(env, userId, session);
