@@ -1,0 +1,42 @@
+name = "pagezy-analyst-bot"
+main = "src/index.ts"
+compatibility_date = "2025-11-19"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "MTPROTO", class_name = "MtprotoCollector" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MtprotoCollector"]
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pagezy-analyst"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "00000000-0000-0000-0000-000000000002"
+
+[[r2_buckets]]
+binding = "EXPORTS"
+bucket_name = "pagezy-exports"
+
+[triggers]
+crons = ["0 */2 * * *"]
+
+[vars]
+MOCK_MODE = "false"
+
+# MTProto: GramJS in Durable Object (secrets TG_API_ID, TG_API_HASH, TG_SESSION_STRING)
+# Optional MTPROTO_COLLECTOR_URL only if GramJS cannot bundle in your account
